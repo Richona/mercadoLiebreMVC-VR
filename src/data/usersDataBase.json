@@ -1,0 +1,22 @@
+[
+   {
+      "id": 1,
+      "name": "Eric",
+      "surname": "Mena",
+      "email": "menaericdaniel@gmail.com",
+      "pass": "$2a$10$bI5yZBP0VqIj/BNMgH2aEuuBbl30/A3NCUiZoLdSqCaIKh5Pc0CCy",
+      "pass2": null,
+      "terms": "1",
+      "avatar" : null
+   },
+   {
+      "id": "[object Object]1",
+      "name": "User",
+      "surname": "Craftsy",
+      "email": "user@craftsy.com",
+      "pass": "$2a$10$QDiv8aLZ5y6f5uunJgQmKuX7LtWbSINlfh3AP6VYzLIWf2yRQh2Ii",
+      "pass2": null,
+      "terms": "1",
+      "avatar" : null
+   }
+]
