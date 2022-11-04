@@ -14,7 +14,7 @@ module.exports = (sequelize, DataTypes) => {
       this.belongsTo(models.User,{
         as : 'user',
         foreignKey : 'userId',
-        onDelete : 'cascade'
+        onDelete : 'cascade' /* elimina automaticamente la direccion al borrar usuario */
       })
     }
   }
@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'Address',
-    paranoid : true
+    paranoid : true /* borrado suave */
   });
   return Address;
 };

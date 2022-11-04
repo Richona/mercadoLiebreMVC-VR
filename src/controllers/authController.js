@@ -1,7 +1,7 @@
 const { hashSync, compareSync } = require("bcryptjs");
 const db = require("../database/models");
-const { sendSequelizeError, createError } = require("../helpers");
-const { sign } = require("jsonwebtoken");
+const { sendSequelizeError, createError } = require("../helpers"); /* Funciones creadas por uno */
+const { sign } = require("jsonwebtoken"); /* metodo para crear Token */
 
 module.exports = {
     signUp: async (req, res) => {
@@ -36,14 +36,14 @@ module.exports = {
                 userId: id,
             });
 
-            const token = sign(
-                {
+            const token = sign( /* Crea Token */
+                { /* Lo que llevara dentro */
                     id,
                     rolId,
                 },
-                process.env.SECRET_KEY_JWT,
+                process.env.SECRET_KEY_JWT, /* Clave ubicada en .env para obtener token */
                 {
-                    expiresIn: "1h",
+                    expiresIn: "1h", /* Tiempo de duracion */
                 }
             )
 
@@ -65,7 +65,7 @@ module.exports = {
             const { email, password } = req.body;
 
             if(!email || !password) {
-                throw createError(404, 'Se require email y password');
+                throw createError(404, 'Se require email y password'); /* Funcion ubicada en helpers/ creada para retornar error  */
             }
 
             let user = await db.User.findOne({
@@ -86,7 +86,7 @@ module.exports = {
                 throw createError(401, 'Credenciales inválidas');
             }
             
-            const token = sign(
+            const token = sign( /* Crea token */
                 {
                     id : user.id,
                     rolId : user.rolId,

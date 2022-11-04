@@ -10,7 +10,7 @@ const {checkToken, uploadFile} = require('../middlewares')
 
 /* /users */
 router
-    .get('/profile', checkToken,  getProfile)
+    .get('/profile', checkToken,  getProfile) /* checkToken verifica si el token es valido */
     .get('/avatar/:avatar',getAvatar)
     .patch('/update', uploadFile.single('avatar'),checkToken, setProfile)
     .delete('/remove',checkToken, remove)

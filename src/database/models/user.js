@@ -11,7 +11,7 @@ const path = require('path');
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
 
-    emailVerify(value) {
+    emailVerify(value) { /* funcion para verificar si el email es valido */
       return new Promise(resolve => {
         const user = User.findOne({
           where: {
@@ -50,7 +50,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        is : objectValidate(/^[a-zA-Zñíóúáéí\s]+$/i,"Solo se aceptan caracteres alfabéticos"),
+        is : objectValidate(/^[a-zA-Zñíóúáéí\s]+$/i,"Solo se aceptan caracteres alfabéticos"), /* valida si es un nombre valido */
         ...validationsModelsDefault,
       }
     },
@@ -58,7 +58,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: false,
       validate: {
-        is : objectValidate(/^[a-zA-Zñíóúáéí\s]+$/i,"Solo se aceptan caracteres alfabéticos"),
+        is : objectValidate(/^[a-zA-Zñíóúáéí\s]+$/i,"Solo se aceptan caracteres alfabéticos"), /* valida si es un nombre valido */
         ...validationsModelsDefault,
       }
     },
@@ -70,8 +70,8 @@ module.exports = (sequelize, DataTypes) => {
         ...validationsModelsDefault,
         isEmail: objectValidate(true, "El email no tiene un formato válido"),
         async email(value) {
-          const user = await this.emailVerify(value);
-          if (user) {
+          const user = await this.emailVerify(value); /* llama a la funcion para encontrar email */
+          if (user) { /* si lo encuentra */
             throw createError(404, "El email ya se encuentra registrado")
           }
         }
@@ -84,7 +84,7 @@ module.exports = (sequelize, DataTypes) => {
         ...validationsModelsDefault,
         is: objectValidate(/^(?=\w*\d)(?=\w*[A-Z])(?=\w*[a-z])\S{6,12}$/, 'La contraseña debe tener un mayúscula, una minuscula, un caracter especial y entre 6 y 12 caracteres'),
         hashPass(value) {
-          User.beforeCreate((user) => {
+          User.beforeCreate((user) => { /* valida si la contraseña es la misma */
             user.password = hashSync(value, 10)
           })
         }
@@ -95,7 +95,7 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       validate: {
         checkDate(value) {
-          if (moment(value).isAfter(moment())) {
+          if (moment(value).isAfter(moment())) { /* valida si la fecha es anterior a la actual */
             throw createError(404, 'La fecha no puede ser posterior a la actual')
           } // true
         }
@@ -106,7 +106,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: "default.png",
       validate: {
         isImage(value) {
-          if (!/.png|.jpg|.jpeg|.webp/i.test(value)) {
+          if (!/.png|.jpg|.jpeg|.webp/i.test(value)) { /* valida si la imagen es valida. TEST testea algo en modelos, y i ignora mayusculas y minus. */
 
             fs.unlinkSync(path.join(__dirname, '..', '..', '..', 'public', 'images', 'users', value))
 
