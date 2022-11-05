@@ -1,8 +1,8 @@
 const db = require('../database/models');
-
+const {validationResult} = require('express-validator')
 const { loadProducts, storeProducts } = require('../data/dbModule');
-const { sendSequelizeError } = require('../helpers');
-const { literal } = require('sequelize'); /* metodo para hacer una consulta LITERAL a la base de datos */
+const { sendSequelizeError, createError } = require('../helpers');
+const { literal, Op } = require('sequelize'); /* metodo para hacer una consulta LITERAL a la base de datos */
 const path = require('path');
 
 const toThousand = n => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
@@ -13,7 +13,7 @@ const controller = {
 
 		try {
 
-			let {limit = 4, page = 1, order = 'ASC', sortBy = 'id'} = req.query;
+			let {limit = 4, page = 1, order = 'ASC', sortBy = 'id', search = "", sale = 0} = req.query;
 			
 			/* paginación */
 			limit = limit > 16 ? 16 : +limit; /* logica para no superar mas de 16 en limit */
@@ -22,42 +22,88 @@ const controller = {
 			
 			/* ordenamiento */
 			order = ['ASC','DESC'].includes(order.toUpperCase()) ? order : 'ASC'; /* Comprobamos si order viene bien, sino le cargamos default ASC */
-			sortBy =  ['name', 'price', 'discount', 'category'].includes(sortBy.toLowerCase()) ? sortBy : 'id';  /* Comprobamos si sortBy viene bien, sino le cargamos default id */
+			sortBy =  ['name', 'price', 'discount', 'category', 'newest'].includes(sortBy.toLowerCase()) ? sortBy : 'id';  /* Comprobamos si sortBy viene bien, sino le cargamos default id */
+
+			let orderQuery = sortBy === "category" ? ['category','name',order] : sortBy === "newest" ? ['createdAt', 'DESC'] : [sortBy, order]
 
 			let options = {
-				attributes: {
-					exclude: ['createdAt', 'updatedAt', 'deletedAt'],
-					include: [[literal(`CONCAT('${req.protocol}://${req.get('host')}/products/',Product.id)`), 'url']] /* Metodo para hacer una consulta LITERAL a la base de datos */
-				},
+				subQuery:false,
+				limit,
+				offset,
+				order : [orderQuery],
 				include: [
 					{
 						association: 'images',
 						attributes: {
 							exclude: ['createdAt', 'updatedAt', 'deletedAt', 'id', 'file', 'productId'],
 							include: [[literal(`CONCAT('${req.protocol}://${req.get('host')}/products/image/',file)`), 'url']]
-						}
+						},
 					},
 					{
 						association: 'category',
-						attributes : ['name','id']
+						attributes : ['name','id'],
+
 					}
 				],
-				order : [
-					[sortBy,order]
+				attributes : {
+					exclude : ['createdAt', 'updatedAt','deletedAt'],
+					include : [[literal(`CONCAT('${req.protocol}://${req.get('host')}/products/',Product.id)`),'url']]
+				},
+				where : {
+					[Op.or] : [
+						{
+							name : {
+								[Op.substring] : search
+							}
+						},
+						{
+							description : {
+								[Op.substring] : search
+							}
+						},
+						{
+							"$category.name$" : {
+								[Op.substring] : search
+							}
+						}
+					],
+					[Op.and] : [
+						{
+							discount : {
+								[Op.gte] : sale
+							}
+						}
+					]
+				}
 
-				],
-				limit,
-				offset,
 
 			}
 
 			const { count, rows: products } = await db.Product.findAndCountAll(options); /* findAndCountAll, ademas de traer todos los datos, los cuenta. */
 
+
+			const queryKeys = {
+				limit,
+				order,
+				sortBy,
+				search,
+				sale
+			}
+
+			let queryUrl = "";
+
+			for (const key in queryKeys) {
+
+				queryUrl += `&${key}=${queryKeys[key]}`
+
+			}
+
+
 			const existPrev = page > 1; /* si la page es 2 o mas, se carga con true, sino, si viene 1, false. */
 			const existNext = offset + limit < count; /* logica para saber si aun quedan datos por mostrar, por ej: 4 + 4 < 16 = TRUE ////; 8 + 4 < 16 = TRUE ////;  8 + 12 < 16 = FALSE ////; */
 			
-			const prev =  existPrev ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page - 1}&limit=${limit}&order=${order}&sortBy=${sortBy}` : null; /* Link con todos los datos para la consulta anterior */
-			const next = existNext ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page + 1}&limit=${limit}&order=${order}&sortBy=${sortBy}` : null; /* Link con todos los datos para la consulta siguiente */
+			const prev =  existPrev ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page - 1}${queryUrl}` : null; /* Link con todos los datos para la consulta anterior */
+			const next = existNext ? `${req.protocol}://${req.get('host')}${req.baseUrl}?page=${page + 1}${queryUrl}` : null; /* Link con todos los datos para la consulta siguiente */
 
 			return res.status(200).json({
 				ok: true,
@@ -121,36 +167,89 @@ const controller = {
             });
 		}
 
-		db.Product.findByPk(req.params.id, {
-			include: [{ all: true }]
-		})
-			.then(product => {
-				return res.render('detail', {
-					product,
-					toThousand
-				})
-			})
-			.catch(error => console.log(error))
-
 	},
-
 	
 	// Create -  Method to store
-	store: (req, res) => {
+	store: async (req, res) => {
 		// Do the magic
-		const { name, price, discount, description, category } = req.body;
+		try {
 
-		db.Product.create({
-			name: name.trim(),
-			price,
-			discount,
-			description,
-			categoryId: category
-		})
-			.then(product => {
-				return res.redirect('/products/detail/' + product.id)
+			let errors = validationResult(req);
+
+			if(!errors.isEmpty()){
+
+				let errorMessages = {}
+
+				for (const key in errors.mapped()) {
+					errorMessages = {
+						...errorMessages,
+						[key] : errors.mapped()[key].msg
+					}
+				}
+
+				let error = new Error()
+				error.status = 400;
+				error.message = errorMessages
+				throw error
+			}
+
+
+
+			const {name, price, discount, description, category} = req.body;
+
+			const product = await db.Product.create({
+				name : name.trim(),
+				price,
+				discount,
+				description : description.trim(),
+				categoryId : category
+			});
+
+
+			if(req.files && req.files.length){
+				let images = req.files.map(file => {
+					return {
+						file : file.filename,
+						productId : product.id
+					}
+				});
+
+				await db.Image.bulkCreate(images, {
+					validate : true
+				})
+			}
+
+			await product.reload({
+				include : [
+					{
+						association : 'images',
+						attributes : {
+							exclude : ['createdAt','updatedAt', 'deletedAt', 'id', 'file', 'productId'],
+							include : [[literal(`CONCAT('${req.protocol}://${req.get('host')}/products/image/',file)`),'url']]
+						}
+					},
+					{
+						association : 'category',
+						attributes : ['name']
+					}
+				]
 			})
-			.catch(error => console.log(error))
+
+			return res.status(201).json({
+				ok : true,
+				data : product
+			})
+
+
+		} catch (error) {
+			console.log(error)
+            return res.status(error.status || 500).json({
+                ok: false,
+                errors : error.message,
+            });
+		}
+
+		
 	},
 	// Update - Method to update
 	update: (req, res) => {
