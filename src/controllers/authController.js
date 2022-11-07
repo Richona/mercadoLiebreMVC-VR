@@ -1,6 +1,7 @@
 const { hashSync, compareSync } = require("bcryptjs");
 const db = require("../database/models");
 const { sendSequelizeError, createError } = require("../helpers"); /* Funciones creadas por uno */
+const { Op } = require('sequelize');
 const { sign } = require("jsonwebtoken"); /* metodo para crear Token */
 
 module.exports = {
@@ -69,9 +70,12 @@ module.exports = {
             }
 
             let user = await db.User.findOne({
-                where : {
-                    email
-                }
+                where: {
+                    [Op.or]: [
+                      { email },
+                      { name: email }
+                    ]
+                  }
             });
 
           /*   if(!user){
