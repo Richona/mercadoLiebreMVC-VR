@@ -22,6 +22,17 @@ module.exports = (sequelize, DataTypes) => {
       })
     }
 
+    nameVerify(value) { /* funcion para verificar si el email es valido */
+      return new Promise(resolve => {
+        const user = User.findOne({
+          where: {
+            name: value
+          }
+        });
+        resolve(user)
+      })
+    }
+
     static associate(models) {
       // define association here
       User.belongsTo(models.Rol, {
@@ -52,6 +63,12 @@ module.exports = (sequelize, DataTypes) => {
       validate: {
         is : objectValidate(/^[a-zA-Zñíóúáéí\s]+$/i,"Solo se aceptan caracteres alfabéticos"), /* valida si es un nombre valido */
         ...validationsModelsDefault,
+        async name(value) {
+          const user = await this.nameVerify(value); /* llama a la funcion para encontrar email */
+          if (user) { /* si lo encuentra */
+            throw createError(404, "El name ya se encuentra registrado")
+          }
+        }
       }
     },
     surname: {
