@@ -45,4 +45,5 @@ Thumbs.db
 node_modules/
 .vscode/
 .env
+public/images/products
 package-lock.json

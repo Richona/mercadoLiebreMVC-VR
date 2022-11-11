@@ -1,4 +1,5 @@
-const {check} = require('express-validator');
+const {check, body} = require('express-validator');
+const db = require('../database/models')
 
 module.exports = [
     check('name')
@@ -11,10 +12,21 @@ module.exports = [
         .exists().withMessage('El campo es obligatorio')
         .notEmpty().withMessage('El precio es requerido').bail()
         .isInt().withMessage('Debe ser un número'),
-    check('category')
+    body('category')
         .exists().withMessage('El campo es obligatorio')
         .notEmpty().withMessage('La categoría es requerida').bail()
-        .isInt().withMessage('Debe ser un número'),
+        .isInt().withMessage('Debe ser un número')
+        .custom((value, {req}) => {
+
+            return db.Category.findAll()
+                .then(categories => {
+                     let idsCategories = categories.map(category => category.id);
+                     if(!idsCategories.includes(+value)){
+                        return Promise.reject()
+                    }
+                })
+                .catch( () => Promise.reject('ID de categoría inexistente'))
+        }),
     check('description')
         .exists().withMessage('El campo es obligatorio')
         .notEmpty().withMessage('La descripción es requerida').bail()
